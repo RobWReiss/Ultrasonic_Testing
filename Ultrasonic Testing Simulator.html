@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A-Scan Ultrasonic Testing Simulator</title>
+<style>
+:root{--bg:#eceff4;--pn:#fff;--fg:#17202e;--mut:#5d687a;--bd:#d6dce6;--ac:#0b7285;--acfg:#fff;--ok:#15803d;--bad:#c62828;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1118;--pn:#151c27;--fg:#e4e9f1;--mut:#94a0b3;--bd:#263042;--ac:#2bb3c9;--acfg:#04161a;--ok:#4ade80;--bad:#ff8a80;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0c1118;--pn:#151c27;--fg:#e4e9f1;--mut:#94a0b3;--bd:#263042;--ac:#2bb3c9;--acfg:#04161a;--ok:#4ade80;--bad:#ff8a80;color-scheme:dark}
+*,*:before,*:after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:13.5px/1.45 Inter,"Segoe UI",system-ui,-apple-system,sans-serif}
+.app{height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column}
+header{background:#0e1622;color:#e8edf5;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:8px 14px;border-bottom:2px solid var(--ac)}
+.brand b{font-size:15px;letter-spacing:.3px;display:block}.brand small{color:#8d9bb0;font-size:11px}
+.steps{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+header .steps button{background:transparent;color:#aab6c8;border:1px solid #2a3850;border-radius:6px;padding:5px 12px}
+header .steps button.on{background:var(--ac);color:var(--acfg);border-color:var(--ac);font-weight:600}
+.chip{font-size:11.5px;padding:3px 9px;border-radius:99px;background:#17212f;border:1px solid #2a3850;color:#cfd8e6;margin-left:4px}
+header .g{color:#4ade80}header .r{color:#ff8a80}
+main{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+.col{min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.panel{background:var(--pn);border:1px solid var(--bd);border-radius:10px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.ph{display:flex;justify-content:space-between;align-items:center;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);margin-bottom:8px;font-weight:600}
+.ph input{width:70px;font:inherit;padding:2px 5px;border:1px solid var(--bd);border-radius:5px;background:var(--bg);color:var(--fg)}
+button{font:inherit;padding:5px 11px;border-radius:7px;border:1px solid var(--bd);background:var(--pn);color:var(--fg);cursor:pointer}
+button:hover:not(:disabled){border-color:var(--ac)}button:disabled{opacity:.4;cursor:default}
+button.on{background:var(--ac);color:var(--acfg);border-color:var(--ac)}
+.tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}.tools .sp{flex:1}
+.seg{display:flex}.seg button{border-radius:0;margin-left:-1px}.seg button:first-child{border-radius:7px 0 0 7px;margin:0}.seg button:last-child{border-radius:0 7px 7px 0}
+canvas{display:block;margin:0 auto;border-radius:6px;touch-action:none}
+#plan{width:min(100%,calc((100dvh - 250px)*1.6667))}.ws #plan{width:min(100%,calc((100dvh - 440px)*1.6667))}
+#side{width:min(100%,calc((100dvh - 440px)*1.6667));margin-top:8px;background:#10151c}
+#scope{width:100%;background:#06130c}
+.bezel{background:#1a2230;border-color:#2b374b;color:#d5dded}.bezel label{color:#9fb0c8}
+.ctl{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin-top:10px;font-size:12px}
+.ctl label{display:flex;flex-direction:column;gap:2px}.ctl b{color:#5dff9a;font-family:ui-monospace,Menlo,monospace}
+.ctl input[type=range]{width:100%;accent-color:var(--ac)}
+.bezel .row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:8px;font-size:12px}
+.bezel button{background:#243044;color:#e4ebf7;border-color:#35445c}
+#ro{font-size:13.5px;min-height:3.8em}.tip{margin-top:6px;color:var(--mut);font-size:12px}
+#info{color:var(--mut)}#info b{color:var(--fg)}.fl{margin:4px 0;padding:5px 8px;border-left:3px solid var(--ac);background:var(--bg);border-radius:0 6px 6px 0}
+.g{color:var(--ok)}.r{color:var(--bad)}label{cursor:pointer}
+@media(max-width:900px){.app{height:auto}main{grid-template-columns:1fr}.col{overflow:visible}#plan,.ws #plan,#side{width:100%}}
+</style></head><body><div class="app">
+<header><div class="brand"><b>A-SCAN ULTRASONIC TESTING</b><small>Pulse-echo inspection simulator · flat steel plate</small></div>
+<nav class="steps" id="modes"></nav><div><span class="chip" id="b1"></span><span class="chip" id="b2"></span></div></header>
+<main>
+<section class="col" id="left"><div class="panel"><div class="ph"><span>Specimen</span><span>Plate no. <input id="seed" type="number" min="1" max="99999"></span></div>
+<div class="tools" id="tools"><div class="seg"><button id="tGel">Gel</button><button id="tProbe">Probe</button><button id="tMark">Mark</button></div>
+<button id="bClrGel">Clear gel</button><button id="bClrMk">Clear marks</button><span class="sp"></span><label><input type="checkbox" id="cIn"> Show inside</label><button id="bRev">Reveal</button><button id="bNew">New plate</button></div>
+<canvas id="plan" width="1200" height="720"></canvas><canvas id="side" width="1200" height="400" style="display:none"></canvas></div></section>
+<section class="col" id="right"><div class="panel bezel"><div class="ph"><span>Flaw detector – A-scan display</span><label><input type="checkbox" id="cTeach"> Teaching mode</label></div>
+<canvas id="scope" width="1200" height="520"></canvas>
+<div class="ctl"><label>Gain <span><b id="gv"></b> dB</span><input type="range" id="gain" min="0" max="80" step="0.5"></label>
+<label>Velocity setting <span><b id="vv"></b> m/s</span><input type="range" id="vel" min="2000" max="8000" step="10"></label></div>
+<div class="row"><button id="bLock">Lock reference</button><button id="bReset">Reset calibration</button><label><input type="checkbox" id="cDac" checked> Show 3 mm FBH curve</label></div></div>
+<div class="panel"><div class="ph"><span>Readout</span></div><div id="ro"></div></div>
+<div class="panel"><div class="ph"><span>Guide &amp; results</span></div><div id="info"></div><div id="rev" style="margin-top:8px"></div></div></section>
+</main></div>
+<script>
+const $=id=>document.getElementById(id),cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+const S={T:40,v0:5900,mode:'inspect',tool:'gel',px:100,py:60,defects:[],marks:[],reveal:false,Gref:null,
+ G0:26+Math.floor(Math.random()*28)*.5,gain:0,vset:0};
+S.gain=Math.max(0,S.G0-12);
+S.vset=Math.round(5900*(Math.random()<.5?.72+Math.random()*.1:1.18+Math.random()*.1)/10)*10;
+const rb=z=>5+z*.0875;               // beam radius (mm) at depth z
+const eff=z=>Math.max(z,17);         // near-field effect: no 1/z^2 loss inside ~17 mm
+const gel=document.createElement('canvas');gel.width=600;gel.height=360;
+const gx=gel.getContext('2d',{willReadFrequently:true});gx.fillStyle='rgb(150,220,255)';
+function blob(x,y){const n=3+Math.floor(Math.random()*3);for(let i=0;i<n;i++){const a=Math.random()*6.283,d=Math.random()*14,r=14+Math.random()*16;gx.beginPath();gx.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,r,0,7);gx.fill();}
+ if(Math.random()<.08){gx.beginPath();gx.ellipse(x+(Math.random()-.5)*50,y+30+Math.random()*20,5+Math.random()*4,9+Math.random()*8,0,0,7);gx.fill();}}
+const pl=$('plan'),pc=pl.getContext('2d'),sd=$('side'),sc=sd.getContext('2d'),so=$('scope'),oc=so.getContext('2d');
+
+function newPlate(seed){
+ let a=seed>>>0;const R=()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+ $('seed').value=seed;S.T=[30,40,50][Math.floor(R()*3)];S.marks=[];S.reveal=false;S.defects=[];$('rev').innerHTML='';
+ const n=R()<.2?0:1+Math.floor(R()*3);let tries=0;
+ while(S.defects.length<n&&tries++<200){const d={x:20+R()*160,y:20+R()*80,z:8+R()*(S.T-16),d:1.5+R()*4.5,crack:R()<.5,ang:R()*Math.PI};
+  d.t=d.crack?.5:.8;if(S.defects.every(o=>Math.hypot(o.x-d.x,o.y-d.y)>30))S.defects.push(d);}
+}
+function coupled(){
+ const d=gx.getImageData(Math.round(S.px*3)-9,Math.round(S.py*3)-9,18,18).data;let n=0;
+ for(let i=3;i<d.length;i+=4)if(d[i]>40)n++;return n/324>.6;}
+
+// ---- physics (simplified) ----
+function echoes(){
+ const gf=Math.pow(10,(S.gain-S.G0)/20),E=[];
+ if(S.mode==='range'){for(let k=1;k<=4;k++)E.push({z:25*k,a:2.8*gf*Math.pow(.6,k-1),k:'BW'});return E;}
+ if(S.mode==='sens'){E.push({z:20,a:.8*gf,k:'FBH'},{z:40,a:2.8*gf,k:'BW'},{z:80,a:1.2*gf,k:'BW'});return E;}
+ S.cp=coupled();if(!S.cp)return E;
+ let bwf=1;
+ for(const f of S.defects){
+  const dx=Math.max(0,Math.hypot(f.x-S.px,f.y-S.py)-f.d/2),r=rb(f.z),off=Math.exp(-1.2*(dx/r)**2);
+  const a=.8*gf*f.t*(f.d/3)**2*(20/eff(f.z))**2*off;
+  if(a>.01)E.push({z:f.z,a,k:'D',f});
+  bwf*=1-Math.min(.9,(f.d/(2*rb(f.z)))**2)*off*.9;}
+ E.push({z:S.T,a:2.8*gf*bwf,k:'BW',bwf},{z:2*S.T,a:2.8*gf*.45*bwf*bwf,k:'BW'});
+ return E;}
+
+// ---- drawing ----
+function drawBlock(){const c=pc;c.setTransform(2,0,0,2,0,0);c.fillStyle='#10151c';c.fillRect(0,0,600,360);
+ const rg=S.mode==='range',T=rg?25:40,k=rg?7:5,w=rg?420:360,x0=(600-w)/2,y0=70,x=300;
+ c.fillStyle='#8892a0';c.fillRect(x0,y0,w,T*k);
+ if(!rg){c.fillStyle='#10151c';c.fillRect(x-7.5,y0+20*k,15,20*k);}
+ c.fillStyle='rgba(255,200,60,.28)';c.beginPath();c.moveTo(x-15,y0);c.lineTo(x+15,y0);c.lineTo(x+22,y0+T*k);c.lineTo(x-22,y0+T*k);c.fill();
+ c.fillStyle='#e8751a';c.fillRect(x-15,y0-14,30,14);
+ c.fillStyle='#cfd6e0';c.font='13px sans-serif';c.textAlign='center';
+ c.fillText(rg?'Calibration block: 25 mm thick steel':'Reference block: 3 mm flat-bottom hole, 20 mm deep',300,30);
+ c.fillStyle='#10151c';c.fillText(T+' mm',x0+w-30,y0+T*k/2);if(!rg)c.fillStyle='#cfd6e0',c.fillText('3 mm FBH',x+55,y0+T*k-30);c.textAlign='left';}
+function drawPlan(){
+ if(S.mode!=='inspect'){drawBlock();return;}
+ const c=pc;c.setTransform(2,0,0,2,0,0);c.clearRect(0,0,600,360);
+ const g=c.createLinearGradient(0,0,600,360);g.addColorStop(0,'#aab3bf');g.addColorStop(1,'#8892a0');c.fillStyle=g;c.fillRect(0,0,600,360);
+ c.strokeStyle='rgba(0,0,0,.12)';c.fillStyle='rgba(0,0,0,.45)';c.font='10px sans-serif';c.lineWidth=1;
+ for(let m=20;m<200;m+=20){c.beginPath();c.moveTo(m*3,0);c.lineTo(m*3,360);c.stroke();c.fillText(m,m*3+2,10);}
+ for(let m=20;m<120;m+=20){c.beginPath();c.moveTo(0,m*3);c.lineTo(600,m*3);c.stroke();c.fillText(m,2,m*3-2);}
+ c.fillStyle='rgba(0,0,0,.55)';c.font='12px sans-serif';c.fillText('Plate surface (top view) 200 × 120 mm, thickness '+S.T+' mm',8,352);
+ c.save();c.globalAlpha=.4;c.shadowColor='rgba(255,255,255,.9)';c.shadowBlur=6;c.drawImage(gel,0,0);c.restore();
+ if(S.reveal){c.lineWidth=2;c.strokeStyle='#d32f2f';c.fillStyle='rgba(211,47,47,.25)';
+  S.defects.forEach(f=>{c.beginPath();if(f.crack){c.moveTo(f.x*3-Math.cos(f.ang)*f.d*1.5,f.y*3-Math.sin(f.ang)*f.d*1.5);c.lineTo(f.x*3+Math.cos(f.ang)*f.d*1.5,f.y*3+Math.sin(f.ang)*f.d*1.5);c.lineWidth=3;c.stroke();}
+   else{c.arc(f.x*3,f.y*3,f.d*1.5,0,7);c.fill();c.stroke();}c.lineWidth=2;});}
+ S.marks.forEach(m=>{let col='#ffd600';if(S.reveal)col=S.defects.some(f=>Math.hypot(f.x-m.x,f.y-m.y)<8)?'#2ecc71':'#ff5252';
+  c.strokeStyle=col;c.lineWidth=2.5;c.beginPath();c.arc(m.x*3,m.y*3,12,0,7);c.moveTo(m.x*3-17,m.y*3);c.lineTo(m.x*3+17,m.y*3);c.moveTo(m.x*3,m.y*3-17);c.lineTo(m.x*3,m.y*3+17);c.stroke();});
+ const x=S.px*3,y=S.py*3;c.strokeStyle='#333';c.lineWidth=3;c.beginPath();c.moveTo(x+12,y-12);c.quadraticCurveTo(x+60,y-50,x+110,y-30);c.stroke();
+ c.fillStyle='#e8751a';c.strokeStyle='#5a2d05';c.lineWidth=2;c.beginPath();c.arc(x,y,15,0,7);c.fill();c.stroke();
+ c.fillStyle='#ffb36b';c.beginPath();c.arc(x,y,9,0,7);c.fill();c.fillStyle='#000';c.beginPath();c.arc(x,y,2,0,7);c.fill();
+}
+function drawSide(){
+ if(!(S.mode==='inspect'&&(S.teach||$('cIn').checked)))return;const c=sc;c.setTransform(2,0,0,2,0,0);c.clearRect(0,0,600,200);
+ const y0=14,h=S.T*3;c.fillStyle='#8892a0';c.fillRect(0,y0,600,h);
+ c.fillStyle='#9aa4b5';c.font='11px sans-serif';c.fillText('Cross-section along the plate at the probe position (depth ↓, 0–'+S.T+' mm)',6,y0+h+14);
+ const x=S.px*3,r0=15,r1=rb(S.T)*3;c.fillStyle='rgba(255,200,60,.28)';c.beginPath();c.moveTo(x-r0,y0);c.lineTo(x+r0,y0);c.lineTo(x+r1,y0+h);c.lineTo(x-r1,y0+h);c.fill();
+ S.defects.forEach(f=>{const dy=Math.abs(f.y-S.py),vis=dy<12;c.globalAlpha=vis?1:.18;c.fillStyle='#d32f2f';c.strokeStyle='#d32f2f';c.lineWidth=3;c.beginPath();
+  if(f.crack){c.moveTo(f.x*3-f.d*1.5,y0+f.z*3);c.lineTo(f.x*3+f.d*1.5,y0+f.z*3);c.stroke();}else{c.arc(f.x*3,y0+f.z*3,f.d*1.5,0,7);c.fill();}});c.globalAlpha=1;
+ if(S.teach&&S.E&&S.E.length){const tg=S.E.filter(e=>e.k==='D'&&e.a>=.05).sort((a,b)=>b.a-a.a)[0]||S.E.find(e=>e.k==='BW');const p=(performance.now()%3200)/3200,zz=tg.z*(p<.5?p*2:2-2*p);
+  c.fillStyle='#ffd54f';c.strokeStyle='#fff';c.lineWidth=1.5;c.beginPath();c.arc(x,y0+zz*3,6,0,7);c.fill();c.stroke();c.fillStyle='#9aa4b5';
+  c.fillText('Sound pulse travels to the '+(tg.k==='D'?'flaw':'back wall')+' ('+tg.z.toFixed(0)+' mm) and returns: round trip '+(2*tg.z/5.9).toFixed(1)+' µs',6,10);}
+ c.fillStyle='#e8751a';c.fillRect(x-15,y0-10,30,10);
+}
+function drawScope(E){
+ const c=oc,x0=34,x1=590,y0=10,y1=226,X=m=>x0+(x1-x0)*m/100,Y=a=>y1-(y1-y0)*a;
+ c.setTransform(2,0,0,2,0,0);c.fillStyle='#06130c';c.fillRect(0,0,600,260);c.strokeStyle='#1d4d33';c.lineWidth=1;c.fillStyle='#6fbf90';c.font='11px sans-serif';
+ for(let i=0;i<=10;i++){c.beginPath();c.moveTo(X(i*10),y0);c.lineTo(X(i*10),y1);c.stroke();c.fillText(i*10,X(i*10)-6,242);}
+ for(let i=0;i<=5;i++){c.beginPath();c.moveTo(x0,Y(i/5));c.lineTo(x1,Y(i/5));c.stroke();c.fillText(i*20+'%',2,Y(i/5)+4);}
+ c.fillText('Depth (mm) as read by the instrument',X(32),256);
+ if(S.mode!=='range'&&S.Gref!=null&&$('cDac').checked){const gr=Math.pow(10,(S.gain-S.Gref)/20);c.strokeStyle='#ffb300';c.setLineDash([6,4]);c.lineWidth=1.5;c.beginPath();
+  for(let m=8;m<=95;m+=1){const a=.8*gr*(20/eff(m))**2,yy=Y(Math.min(a,1.15));m===8?c.moveTo(X(m),yy):c.lineTo(X(m),yy);}c.stroke();c.setLineDash([]);c.fillStyle='#ffb300';c.fillText('3 mm FBH reference curve',X(52),y0+12);}
+ if(S.mode==='sens'){c.strokeStyle='#fff';c.setLineDash([2,4]);c.beginPath();c.moveTo(x0,Y(.8));c.lineTo(x1,Y(.8));c.stroke();c.setLineDash([]);c.fillStyle='#fff';c.fillText('80% target',x1-62,Y(.8)-4);}
+ const N=556;let clip=false;c.beginPath();
+ for(let i=0;i<=N;i++){const m=i/N*100;let v=1.3*Math.exp(-((m/1.8)**2))+Math.random()*.025;
+  for(const e of E){const p=e.z*S.vset/S.v0;v+=e.a*Math.exp(-(((m-p)/.7)**2));}
+  if(v>1){clip=true;v=1;}const xx=x0+i,yy=Y(v);i?c.lineTo(xx,yy):c.moveTo(xx,yy);}
+ c.strokeStyle='#5dff9a';c.lineWidth=1.6;c.stroke();c.lineTo(x1,y1);c.lineTo(x0,y1);c.fillStyle='rgba(93,255,154,.18)';c.fill();
+ if(S.teach){c.font='bold 11px sans-serif';c.textAlign='center';
+  const L=[{p:0,t:'Initial pulse',a:1,col:'#ffd54f'}];
+  E.forEach(e=>{const p=e.z*S.vset/S.v0;if(e.a>.04&&p<100)L.push({p,t:(e.k==='D'?'FLAW':e.k==='FBH'?'REF. HOLE':'BACK WALL')+' · '+(2*e.z/5.9).toFixed(1)+' µs',a:Math.min(1,e.a),col:e.k==='D'?'#ff8a80':'#ffd54f'});});
+  L.forEach(l=>{c.fillStyle=l.col;c.fillText(l.t,cl(X(l.p),70,540),Math.max(y0+28,Y(l.a)-8));});c.textAlign='left';}
+ if(clip){c.fillStyle='#ff6b6b';c.font='bold 12px sans-serif';c.fillText('SATURATED – reduce gain',x0+8,y0+14);}
+}
+
+// ---- readouts ----
+const INFO={
+ range:'<b>Step 1 – Range calibration.</b> The instrument measures <i>time</i>, not distance; it converts using a sound speed. If that setting is wrong, every depth reading is wrong. This block is exactly 25 mm thick, so echoes bounce back and forth at 25, 50, 75 mm. Adjust the <b>velocity setting</b> until the first echo sits on 25 mm and the second on 50 mm.',
+ sens:'<b>Step 2 – Sensitivity.</b> The reference block has a 3 mm flat-bottom hole (FBH) drilled 20 mm down – our yardstick. Adjust the <b>gain</b> (dB, a volume control) until its echo is 80% of screen height, then lock it. The amber curve then shows how tall a 3 mm FBH echo would be at <i>any</i> depth (deeper = weaker).',
+ inspect:'<b>Step 3 – Inspect.</b> (1) Spread <b>gel</b> – sound cannot cross an air gap. (2) Drag the <b>probe</b> across the gel. Left edge = initial pulse, then any echo from a flaw, then the back wall. (3) Compare a flaw echo with the amber curve to get its <b>FBH equivalent</b>, and <b>mark</b> its position. Press Reveal to check.'};
+function readout(E){
+ const r=$('ro');let h='';S.rd=null;
+ const fb=E.find(e=>e.k==='FBH'),bw=E.find(e=>e.k==='BW');const dp=z=>(z*S.vset/S.v0);
+ if(S.mode==='range'){h='First echo at <b>'+dp(25).toFixed(1)+' mm</b> (should be 25.0); second at <b>'+dp(50).toFixed(1)+' mm</b> (should be 50.0). '+(Math.abs(S.vset-S.v0)<=80?'<span class="g"><b>Range calibrated ✓</b></span>':'<span class="r">Out of calibration – the sound speed in steel is about 5900 m/s, but the instrument only knows what you tell it.</span>');}
+ else if(S.mode==='sens'){const H=Math.min(fb.a,1.5);h='Reference hole echo: <b>'+(fb.a*100).toFixed(0)+'%</b> of screen height at '+dp(20).toFixed(1)+' mm (target 80%). '+(S.Gref!=null?'<span class="g"><b>Locked ✓</b> at '+S.Gref+' dB.</span>':'Adjust gain then press <b>Lock reference</b>.');
+  $('bLock').disabled=!(Math.abs(fb.a-.8)<.045);}
+ else{
+  if(!S.cp)h='<span class="r"><b>No signal – probe is not on gel.</b></span> Only the initial pulse and noise show: the air gap reflects all the sound.';
+  else{const ds=E.filter(e=>e.k==='D'&&e.a>=.05).sort((a,b)=>b.a-a.a)[0],b=E.find(e=>e.k==='BW');
+   if(ds){const zd=dp(ds.z),A=Math.min(ds.a,1);h='<b>Flaw echo</b> at <b>'+zd.toFixed(1)+' mm</b> deep, height <b>'+(ds.a*100).toFixed(0)+'%</b>. ';
+    if(ds.a>1)h+='Saturated – reduce gain to read the true height. ';
+    else if(S.Gref==null)h+='<span class="r">Lock a reference in Step 2 to get a size.</span> ';
+    else{const gr=Math.pow(10,(S.gain-S.Gref)/20),ref=.8*gr*(20/eff(zd))**2,eq=3*Math.sqrt(A/ref);S.rd={zd,eq};
+     h+='A 3 mm FBH at that depth would give '+(ref*100).toFixed(0)+'%, so this is equivalent to a <b>≈'+eq.toFixed(1)+' mm FBH</b>.';}
+    h+='<br>Back wall at '+dp(S.T).toFixed(1)+' mm: '+Math.min(b.a*100,999).toFixed(0)+'%'+(b.bwf<.85?' – <b>reduced</b> (the flaw is casting a shadow).':'.');}
+   else h='No flaw echo. Back wall at <b>'+dp(S.T).toFixed(1)+' mm</b>, height '+Math.min(b.a*100,999).toFixed(0)+'%. '+(b.bwf<.85?'It is lower than normal – a flaw may be shadowing it.':'');}
+  $('bLock').disabled=true;}
+ r.innerHTML=h+(S.teach?'<div class="tip">Depth = sound speed × round-trip time ÷ 2. The instrument measures time; the velocity setting turns it into millimetres.</div>':'');
+ $('b1').innerHTML=Math.abs(S.vset-S.v0)<=80?'<span class="g">Range ✓</span>':'<span class="r">Range ✗ not calibrated</span>';
+ $('b2').innerHTML=S.Gref!=null?'<span class="g">Sensitivity ✓ ('+S.Gref+' dB)</span>':'<span class="r">Sensitivity ✗ not set</span>';
+}
+function revealList(){
+ let ok=0,h=S.defects.length?'':'<div class="fl">Clean plate – no flaws. '+(S.marks.length?'<span class="r">Your '+S.marks.length+' mark(s) were false calls.</span>':'<span class="g">Correct: no marks ✓</span>')+'</div>';
+ S.defects.forEach((f,i)=>{const m=S.marks.filter(m=>Math.hypot(f.x-m.x,f.y-m.y)<8).sort((p,q)=>Math.hypot(f.x-p.x,f.y-p.y)-Math.hypot(f.x-q.x,f.y-q.y))[0],te=f.d*Math.sqrt(f.t);if(m)ok++;
+  h+='<div class="fl"><b>'+(i+1)+'. '+(f.crack?'Crack':'Inclusion')+'</b> ø'+f.d.toFixed(1)+' mm at '+f.z.toFixed(1)+' mm deep · true FBH equivalent '+te.toFixed(1)+' mm<br>'+(m?'<span class="g">Found ✓</span> position error '+Math.hypot(f.x-m.x,f.y-m.y).toFixed(1)+' mm'+(m.rd?' · your depth reading '+m.rd.zd.toFixed(1)+' mm ('+(m.rd.zd-f.z>=0?'+':'')+(m.rd.zd-f.z).toFixed(1)+'), your FBH equivalent '+m.rd.eq.toFixed(1)+' mm':' · no echo reading was recorded with this mark'):'<span class="r">Missed</span>')+'</div>';});
+ const bad=S.marks.filter(m=>!S.defects.some(f=>Math.hypot(f.x-m.x,f.y-m.y)<8)).length;
+ $('rev').innerHTML='<b>Result'+(S.defects.length?': '+ok+' of '+S.defects.length+' flaws found':'')+'</b>'+h+(bad&&S.defects.length?'<div class="r">'+bad+' mark(s) not on a flaw.</div>':'')+'<div class="tip">A crack reflects less than a round inclusion of the same size, so FBH equivalent is not the true size.</div>';
+}
+
+// ---- UI ----
+[['range','1 Range calibration'],['sens','2 Sensitivity'],['inspect','3 Inspect']].forEach(([k,t])=>{const b=document.createElement('button');b.textContent=t;b.dataset.k=k;b.onclick=()=>{S.mode=k;ui();};$('modes').appendChild(b);});
+function ui(){
+ [...$('modes').children].forEach(b=>b.classList.toggle('on',b.dataset.k===S.mode));
+ ['Gel','Probe','Mark'].forEach(n=>$('t'+n).classList.toggle('on',S.tool===n.toLowerCase()));
+ $('info').innerHTML=INFO[S.mode];$('tools').style.display=S.mode==='inspect'?'':'none';
+ $('bLock').style.display=S.mode==='sens'?'':'none';}
+$('tGel').onclick=()=>{S.tool='gel';ui()};$('tProbe').onclick=()=>{S.tool='probe';ui()};$('tMark').onclick=()=>{S.tool='mark';ui()};
+$('bClrGel').onclick=()=>gx.clearRect(0,0,600,360);$('bClrMk').onclick=()=>{S.marks=[];if(S.reveal)revealList()};
+$('bRev').onclick=()=>{S.reveal=!S.reveal;S.reveal?revealList():$('rev').innerHTML='';};
+$('bNew').onclick=()=>newPlate(1+Math.floor(Math.random()*9999));$('seed').onchange=e=>newPlate(Math.max(1,+e.target.value||1));
+$('bLock').onclick=()=>{S.Gref=S.gain;};
+$('bReset').onclick=()=>{S.Gref=null;S.G0=26+Math.floor(Math.random()*28)*.5;S.gain=Math.max(0,S.G0-12);S.vset=Math.round(5900*(Math.random()<.5?.72+Math.random()*.1:1.18+Math.random()*.1)/10)*10;$('gain').value=S.gain;$('vel').value=S.vset;S.mode='range';ui();};
+$('gain').value=S.gain;$('vel').value=S.vset;
+$('gain').oninput=e=>{S.gain=+e.target.value};$('vel').oninput=e=>{S.vset=+e.target.value};
+$('cTeach').onchange=e=>{S.teach=e.target.checked};
+let down=false,last=null;
+const pos=e=>{const r=pl.getBoundingClientRect();return[(e.clientX-r.left)/r.width*600,(e.clientY-r.top)/r.height*360]};
+function act(e,first){if(S.mode!=='inspect')return;const[x,y]=pos(e);
+ if(S.tool==='gel'){if(!last)last=[x,y];const dx=x-last[0],dy=y-last[1],n=Math.max(1,Math.ceil(Math.hypot(dx,dy)/8));for(let i=1;i<=n;i++)blob(last[0]+dx*i/n,last[1]+dy*i/n);last=[x,y];}
+ else if(S.tool==='probe'){S.px=cl(x/3,5,195);S.py=cl(y/3,5,115);}
+ else if(first){S.marks.push({x:x/3,y:y/3,rd:S.rd});if(S.reveal)revealList();}}
+pl.addEventListener('pointerdown',e=>{pl.setPointerCapture(e.pointerId);down=true;last=null;act(e,true)});
+pl.addEventListener('pointermove',e=>{if(down)act(e,false)});
+addEventListener('pointerup',()=>{down=false;last=null});
+function loop(){
+ $('gv').textContent=S.gain.toFixed(1);$('vv').textContent=S.vset;
+ const sv=S.mode==='inspect'&&(S.teach||$('cIn').checked);sd.style.display=sv?'block':'none';$('left').classList.toggle('ws',sv);const E=echoes();S.E=E;drawPlan();drawSide();drawScope(E);readout(E);requestAnimationFrame(loop);}
+newPlate(1+Math.floor(Math.random()*9999));ui();loop();
+</script></body></html>
